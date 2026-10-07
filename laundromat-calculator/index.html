@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laundromat Profit Calculator</title>
+<meta name="description" content="Change turns per day, prices, rent and loan terms, and see what a laundromat owner really keeps.">
+<style>
+:root{--bg:#0f1115;--card:#171a20;--fg:#f2f2f2;--mut:#8a8f98;--acc:#f5b301;--red:#ff5a4f;--grn:#3ecf8e;--line:#2a2e36}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:32px 16px}
+h1{font-size:30px;margin:0 0 6px}p.sub{color:var(--mut);margin:0 0 24px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:14px;padding:20px}
+label{display:block;margin:12px 0 4px;color:var(--mut);font-size:14px}
+.inrow{display:flex;gap:10px;align-items:center}input[type=range]{flex:1;accent-color:var(--acc)}
+input[type=number]{width:110px;background:#0f1115;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:6px 8px;font:inherit}
+table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px solid var(--line)}td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.g{color:var(--grn)}.r{color:var(--red)}.a{color:var(--acc)}.m{color:var(--mut)}
+.big{font-size:40px;font-weight:800;margin:14px 0 2px}
+small{color:var(--mut)}
+</style>
+</head>
+<body><main>
+<h1>Laundromat Profit Calculator</h1>
+<p class="sub">From the video “Why Buying a Laundromat Pays You Almost Nothing”. Defaults are the illustrative store from the video. Not financial advice.</p>
+<div class="grid">
+<section class="card" id="inputs"></section>
+<section class="card">
+<table id="pl"></table>
+<div class="big" id="keep"></div><small id="keepnote"></small>
+<p class="m" id="be"></p>
+</section>
+</div>
+<p><small>Benchmarks: utilities ≈ 19–21% of revenue, healthy rent 15–25%, staffed payroll ≈ 22% (Coin Laundry Association, American Coin-Op 2026 survey, PlanetLaundry). Equipment cost, equipment life and loan terms are assumptions — use your own.</small></p>
+</main>
+<script>
+const F=[["washers","Washers",18,4,80,1],["turns","Turns per washer per day",3.5,1,8,0.1],["wash","Average wash price ($)",5.5,2,12,0.25],["dry","Dryer revenue per wash ($)",2,0,5,0.25],["other","Other revenue per year ($)",6000,0,50000,500],["util","Utilities per wash ($)",1.5,0.5,4,0.05],["rm","Repairs per wash ($)",0.3,0,2,0.05],["rent","Rent per year ($)",36000,0,150000,1000],["labor","Labor per year ($)",32000,0,150000,1000],["fixed","Insurance, fees, other fixed ($)",12000,0,60000,500],["equip","Equipment cost ($)",250000,0,800000,5000],["life","Equipment life (years)",12,5,20,1],["mult","Purchase price (× operating profit)",4,0,8,0.1],["fin","Financed (%)",90,0,100,5],["rate","Loan rate (%)",10,0,20,0.25],["years","Loan length (years)",10,1,25,1]];
+const box=document.getElementById('inputs');const v={};
+F.forEach(([k,l,d,mi,ma,st])=>{v[k]=d;box.insertAdjacentHTML('beforeend',`<label for="${k}">${l}</label><div class="inrow"><input type="range" id="${k}r" min="${mi}" max="${ma}" step="${st}" value="${d}"><input type="number" id="${k}" min="${mi}" step="${st}" value="${d}"></div>`);});
+F.forEach(([k])=>{const r=document.getElementById(k+'r'),n=document.getElementById(k);r.oninput=()=>{n.value=r.value;v[k]=+r.value;calc()};n.oninput=()=>{r.value=n.value;v[k]=+n.value||0;calc()};});
+const $=x=>(x<0?'− $':'$')+Math.round(Math.abs(x)).toLocaleString('en-US');
+function calc(){const w=v.washers*v.turns*365;const rev=w*(v.wash+v.dry)+v.other;const util=w*v.util,rm=w*v.rm;const op=rev-util-rm-v.rent-v.labor-v.fixed;
+const reserve=v.life?v.equip/v.life:0;const price=Math.max(op,0)*v.mult;const P=price*v.fin/100,r=v.rate/100,n=v.years;const pay=P?(r?P*r/(1-Math.pow(1+r,-n)):P/n):0;const keep=op-reserve-pay;
+const pct=x=>rev?` <span class="m">(${Math.round(x/rev*100)}%)</span>`:'';
+document.getElementById('pl').innerHTML=`<tr><td>Revenue (${Math.round(w/365)} washes/day)</td><td>${$(rev)}</td></tr><tr><td>Utilities${pct(util)}</td><td class="m">${$(-util)}</td></tr><tr><td>Rent${pct(v.rent)}</td><td class="m">${$(-v.rent)}</td></tr><tr><td>Labor${pct(v.labor)}</td><td class="m">${$(-v.labor)}</td></tr><tr><td>Repairs, insurance, fees</td><td class="m">${$(-(rm+v.fixed))}</td></tr><tr><td class="g">Operating profit${pct(op)}</td><td class="g">${$(op)}</td></tr><tr><td class="r">Equipment reserve</td><td class="r">${$(-reserve)}</td></tr><tr><td class="r">Loan payment (price ${$(price)})</td><td class="r">${$(-pay)}</td></tr>`;
+const k=document.getElementById('keep');k.textContent=$(keep)+' / year';k.className='big '+(keep>0?'a':'r');
+document.getElementById('keepnote').textContent='What the owner really keeps';
+const per=(v.wash+v.dry-v.util-v.rm)*365*v.washers;const be=per>0?(v.rent+v.labor+v.fixed+reserve+pay-v.other)/per:NaN;
+document.getElementById('be').textContent=isFinite(be)?`Break-even with loan and reserve: ${be.toFixed(1)} turns per washer per day.`:'';}
+calc();
+</script>
+</body></html>
